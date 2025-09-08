@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 
 export default function Terms() {
   const [text, setText] = useState("");
@@ -20,8 +21,8 @@ export default function Terms() {
             <div style={{ fontSize: 14, color: '#475569' }}>מסמך עקרונות ושימוש עבור החברים והאורחים</div>
           </div>
           <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-            <a href="/" style={{ textDecoration: 'underline', fontSize: 14 }}>דף החיפוש</a>
-            <a href="/admin" style={{ textDecoration: 'underline', fontSize: 14 }}>דף מנהל</a>
+            <Link to="/" style={{ textDecoration: 'underline', fontSize: 14 }}>דף החיפוש</Link>
+            <Link to="/admin" style={{ textDecoration: 'underline', fontSize: 14 }}>דף מנהל</Link>
             <button onClick={() => window.print()} style={{ border: '1px solid #e5e7eb', background: '#f8fafc', padding: '6px 10px', borderRadius: 8, fontSize: 12 }}>הדפס</button>
           </div>
         </header>
@@ -59,4 +60,3 @@ const defaultText = `
 ## אכיפה וניהול
 - הנהלת הדירה רשאית לעדכן תקנון זה ולפעול לאכיפתו.
 `;
-

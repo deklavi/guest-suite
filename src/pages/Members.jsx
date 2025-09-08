@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { addDays, addMonths, differenceInCalendarDays, format, parseISO } from "date-fns";
 import { loadMembersSeeded, saveMembers, resetDemoMembers, normalizeId3 } from "../lib/membersStore.js";
 
@@ -230,24 +231,12 @@ export default function Members() {
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-2xl mx-auto space-y-6">
-        <div className="text-sm">
-          <a className="underline" href="/">← חזרה לדף חיפוש</a>
-        </div>
+        <div className="text-sm"><Link className="underline" to="/">← חזרה לדף חיפוש</Link></div>
         <header className="flex items-center justify-between">
           <h1 className="text-xl font-semibold">ניהול חברים</h1>
           <nav style={{ display: 'flex', gap: 8 }}>
-            <a
-              href="/admin"
-              style={{ textDecoration: 'none', border: '1px solid #e5e7eb', background: '#f8fafc', padding: '6px 12px', borderRadius: 999, fontSize: 14 }}
-            >
-              ← דף המנהל
-            </a>
-            <a
-              href="/"
-              style={{ textDecoration: 'none', border: '1px solid #e5e7eb', background: '#f8fafc', padding: '6px 12px', borderRadius: 999, fontSize: 14 }}
-            >
-              דף הבית
-            </a>
+            <Link to="/admin" style={{ textDecoration: 'none', border: '1px solid #e5e7eb', background: '#f8fafc', padding: '6px 12px', borderRadius: 999, fontSize: 14 }}>← דף המנהל</Link>
+            <Link to="/" style={{ textDecoration: 'none', border: '1px solid #e5e7eb', background: '#f8fafc', padding: '6px 12px', borderRadius: 999, fontSize: 14 }}>דף הבית</Link>
             <button
               onClick={() => {
                 resetDemoMembers();
@@ -257,13 +246,7 @@ export default function Members() {
             >
               איפוס מאגר דמו
             </button>
-            <a
-              href="/admin"
-              onClick={(e)=>{ e.preventDefault(); try{ localStorage.removeItem('simple.admin.ok'); }catch{} window.location.assign('/admin'); }}
-              style={{ textDecoration: 'none', border: '1px solid #e5e7eb', background: '#f8fafc', padding: '6px 12px', borderRadius: 999, fontSize: 14 }}
-            >
-              התנתק
-            </a>
+            <button onClick={()=>{ try{ localStorage.removeItem('simple.admin.ok'); }catch{} window.location.hash = '#/admin'; }} style={{ textDecoration: 'none', border: '1px solid #e5e7eb', background: '#f8fafc', padding: '6px 12px', borderRadius: 999, fontSize: 14 }}>התנתק</button>
           </nav>
         </header>
 

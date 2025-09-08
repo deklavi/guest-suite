@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import { addDays, addMonths, format, isBefore, parseISO, startOfDay, differenceInCalendarDays, getDay, startOfMonth, endOfMonth, eachDayOfInterval } from "date-fns";
 import { he } from "date-fns/locale";
 import { loadMembersSeeded } from "../lib/membersStore.js";
@@ -277,10 +278,10 @@ export default function PublicBooking({ enableAdmin = true }) {
             </div>
           </div>
           <div style={{ display:'flex', gap:12, alignItems:'center' }}>
-            <a href="/terms" style={{ textDecoration: 'underline', fontSize: 14 }}>תקנון</a>
-            <a href="/privacy" style={{ textDecoration: 'underline', fontSize: 14 }}>מדיניות פרטיות</a>
+            <Link to="/terms" style={{ textDecoration: 'underline', fontSize: 14 }}>תקנון</Link>
+            <Link to="/privacy" style={{ textDecoration: 'underline', fontSize: 14 }}>מדיניות פרטיות</Link>
             {enableAdmin && (
-              <a href="/admin" style={{ textDecoration: 'underline', fontSize: 14 }}>דף מנהל</a>
+              <Link to="/admin" style={{ textDecoration: 'underline', fontSize: 14 }}>דף מנהל</Link>
             )}
           </div>
         </div>
