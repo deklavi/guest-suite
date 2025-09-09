@@ -251,6 +251,19 @@ export default function PublicBooking({ enableAdmin = true }) {
   }
   function handleReserve() {
     if (!result || result.status !== 'ok') return;
+    const mid = normalizeId3(memberId) ?? String(memberId || "");
+    const same =
+      result.request &&
+      String(result.request.memberId) === String(mid) &&
+      String(result.request.memberName || "") === String(memberName || "") &&
+      result.request.start === startReq &&
+      result.request.end === endReq;
+    if (!same) {
+      // Prevent booking stale dates; ask to re-check availability first
+      setResult({ status: 'policy', message: 'התאריכים השתנו — נא ללחוץ "בדוק זמינות" שוב', request:{ start: startReq, end: endReq, memberId, memberName } });
+      setReserveStatus("");
+      return;
+    }
     reserveRange(result.request.start, result.request.end);
   }
 
@@ -519,14 +532,27 @@ export default function PublicBooking({ enableAdmin = true }) {
 
         {result && (
           <div className="bg-white p-4 rounded-2xl border" style={{ fontSize: 18 }}>
-            {result.status === 'ok' && (
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-                <div>✅ פנוי — {prettyRange([result.request.start,result.request.end])}</div>
-                <button onClick={handleReserve} style={{ background: '#0f766e', color: 'white', borderRadius: 999, padding: '10px 14px', fontSize: 16 }}>
-                  הזמנת תאריכים אלה
-                </button>
-              </div>
-            )}
+            {result.status === 'ok' && (() => {
+              const mid = normalizeId3(memberId) ?? String(memberId || "");
+              const stale = !result.request ||
+                String(result.request.memberId) !== String(mid) ||
+                String(result.request.memberName || "") !== String(memberName || "") ||
+                result.request.start !== startReq ||
+                result.request.end !== endReq;
+              return (
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+                  <div>✅ פנוי — {prettyRange([result.request.start,result.request.end])}</div>
+                  <button
+                    onClick={handleReserve}
+                    disabled={stale}
+                    title={stale ? 'התאריכים השתנו — בדוק זמינות מחדש' : undefined}
+                    style={{ background: '#0f766e', color: 'white', borderRadius: 999, padding: '10px 14px', fontSize: 16, opacity: stale ? 0.6 : 1 }}
+                  >
+                    הזמנת תאריכים אלה
+                  </button>
+                </div>
+              );
+            })()}
             {result.status === 'policy' && (
               <div style={{ color: '#b91c1c' }}>❗ {String(result.message || 'עד חמישה לילות בחודש')}</div>
             )}
