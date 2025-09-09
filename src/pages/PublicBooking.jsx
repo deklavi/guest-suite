@@ -32,6 +32,21 @@ export default function PublicBooking({ enableAdmin = true }) {
   const [endViewMonth, setEndViewMonth] = useState(() => startOfMonth(new Date()));
   const listboxId = 'member-suggest';
 
+  // Invalidate previous availability result if inputs change from what was checked
+  useEffect(() => {
+    if (!result) return;
+    try {
+      const mid = normalizeId3(memberId) ?? String(memberId || "");
+      const same =
+        result.request &&
+        String(result.request.memberId) === String(mid) &&
+        String(result.request.memberName || "") === String(memberName || "") &&
+        result.request.start === startReq &&
+        result.request.end === endReq;
+      if (!same) { setResult(null); setReserveStatus(""); }
+    } catch {}
+  }, [memberId, memberName, startReq, endReq]);
+
   function highlight(text, query) {
     const q = String(query || '').trim();
     if (!q) return text;
