@@ -134,6 +134,19 @@ export default function PublicBooking({ enableAdmin = true }) {
     }
 
     const nights = listNights(startReq, endReq);
+
+    // Safety: if horizon was somehow not caught above, enforce again here
+    if (+fromISO(startReq) > +horizon) {
+      setResult({
+        status: 'policy',
+        message: usedInLast6M
+          ? `ניתן להזמין עד שישה שבועות מראש מאחר והשתמשת בחצי שנה האחרונה`
+          : `ניתן להזמין עד שמונה שבועות מראש מאחר ולא השתמשת בחצי השנה האחרונה`,
+        request:{start:startReq,end:endReq,memberId,memberName}
+      });
+      setReserveStatus("");
+      return;
+    }
     // policy: up to 5 nights per calendar month and up to 5 nights total in a search
     const perMonth = new Map();
     for (const iso of nights) {
