@@ -267,6 +267,25 @@ export default function PublicBooking({ enableAdmin = true }) {
     reserveRange(result.request.start, result.request.end);
   }
 
+  // Reserve a specific range from the current result (e.g., alternative or segment),
+  // but only if the current inputs match the validated request.
+  function handleReserveExact(s, e) {
+    if (!result) return;
+    const mid = normalizeId3(memberId) ?? String(memberId || "");
+    const same =
+      result.request &&
+      String(result.request.memberId) === String(mid) &&
+      String(result.request.memberName || "") === String(memberName || "") &&
+      result.request.start === startReq &&
+      result.request.end === endReq;
+    if (!same) {
+      setResult({ status: 'policy', message: 'התאריכים השתנו — נא ללחוץ "בדוק זמינות" שוב', request:{ start: startReq, end: endReq, memberId, memberName } });
+      setReserveStatus("");
+      return;
+    }
+    reserveRange(s, e);
+  }
+
   // Suggestions based on currently active field's query
   const query = (activeField === 'id' ? memberId : activeField === 'name' ? memberName : "").trim();
   const suggestions = useMemo(() => {
@@ -556,41 +575,67 @@ export default function PublicBooking({ enableAdmin = true }) {
             {result.status === 'policy' && (
               <div style={{ color: '#b91c1c' }}>❗ {String(result.message || 'עד חמישה לילות בחודש')}</div>
             )}
-            {result.status === 'full' && (
-              <div style={{ display: 'grid', gap: 8 }}>
-                <div>❌ לצערי כבר תפוס — {prettyRange([result.request.start,result.request.end])}</div>
-                {result.alt ? (
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-                    <div>הצעה חלופית: {prettyRange([result.alt.start, result.alt.end])}</div>
-                    <button onClick={() => reserveRange(result.alt.start, result.alt.end)} style={{ background: '#0f766e', color: 'white', borderRadius: 999, padding: '8px 12px', fontSize: 16 }}>
-                      הזמנת ההצעה
-                    </button>
-                  </div>
-                ) : (
-                  <div style={{ color: '#6b7280', fontSize: 14 }}>לא נמצאה הצעה חלופית מתאימה.</div>
-                )}
-              </div>
-            )}
-            {result.status === 'partial' && (
-              <div style={{ display: 'grid', gap: 8 }}>
-                <div>⏳ חלק מהימים כבר תפוסים — {prettyRange([result.request.start,result.request.end])}</div>
-                <div style={{ fontSize: 14, color: '#475569' }}>אפשרות להזמין רק את הימים הפנויים:</div>
-                {result.segments && result.segments.length > 0 ? (
-                  <div style={{ display: 'grid', gap: 6 }}>
-                    {result.segments.map((seg, i) => (
-                      <div key={`${seg.start}-${i}`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-                        <div>{prettyRange([seg.start, seg.end])}</div>
-                        <button onClick={() => reserveRange(seg.start, seg.end)} style={{ background: '#0f766e', color: 'white', borderRadius: 999, padding: '8px 12px', fontSize: 16 }}>
-                          הזמנה לתאריכים אלו
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div style={{ color: '#6b7280', fontSize: 14 }}>אין ימים פנויים מתוך הטווח המבוקש.</div>
-                )}
-              </div>
-            )}
+            {result.status === 'full' && (() => {
+              const mid = normalizeId3(memberId) ?? String(memberId || "");
+              const stale = !result.request ||
+                String(result.request.memberId) !== String(mid) ||
+                String(result.request.memberName || "") !== String(memberName || "") ||
+                result.request.start !== startReq ||
+                result.request.end !== endReq;
+              return (
+                <div style={{ display: 'grid', gap: 8 }}>
+                  <div>❌ לצערי כבר תפוס — {prettyRange([result.request.start,result.request.end])}</div>
+                  {result.alt ? (
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+                      <div>הצעה חלופית: {prettyRange([result.alt.start, result.alt.end])}</div>
+                      <button
+                        onClick={() => handleReserveExact(result.alt.start, result.alt.end)}
+                        disabled={stale}
+                        title={stale ? 'התאריכים השתנו — בדוק זמינות מחדש' : undefined}
+                        style={{ background: '#0f766e', color: 'white', borderRadius: 999, padding: '8px 12px', fontSize: 16, opacity: stale ? 0.6 : 1 }}
+                      >
+                        הזמנת ההצעה
+                      </button>
+                    </div>
+                  ) : (
+                    <div style={{ color: '#6b7280', fontSize: 14 }}>לא נמצאה הצעה חלופית מתאימה.</div>
+                  )}
+                </div>
+              );
+            })()}
+            {result.status === 'partial' && (() => {
+              const mid = normalizeId3(memberId) ?? String(memberId || "");
+              const stale = !result.request ||
+                String(result.request.memberId) !== String(mid) ||
+                String(result.request.memberName || "") !== String(memberName || "") ||
+                result.request.start !== startReq ||
+                result.request.end !== endReq;
+              return (
+                <div style={{ display: 'grid', gap: 8 }}>
+                  <div>⏳ חלק מהימים כבר תפוסים — {prettyRange([result.request.start,result.request.end])}</div>
+                  <div style={{ fontSize: 14, color: '#475569' }}>אפשרות להזמין רק את הימים הפנויים:</div>
+                  {result.segments && result.segments.length > 0 ? (
+                    <div style={{ display: 'grid', gap: 6 }}>
+                      {result.segments.map((seg, i) => (
+                        <div key={`${seg.start}-${i}`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+                          <div>{prettyRange([seg.start, seg.end])}</div>
+                          <button
+                            onClick={() => handleReserveExact(seg.start, seg.end)}
+                            disabled={stale}
+                            title={stale ? 'התאריכים השתנו — בדוק זמינות מחדש' : undefined}
+                            style={{ background: '#0f766e', color: 'white', borderRadius: 999, padding: '8px 12px', fontSize: 16, opacity: stale ? 0.6 : 1 }}
+                          >
+                            הזמנה לתאריכים אלו
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div style={{ color: '#6b7280', fontSize: 14 }}>אין ימים פנויים מתוך הטווח המבוקש.</div>
+                  )}
+                </div>
+              );
+            })()}
             {reserveStatus === 'ok' && (
               <div style={{ marginTop: 8, fontSize: 14, color: '#065f46' }}>
                 ההזמנה נשמרה בהצלחה.
