@@ -58,8 +58,9 @@ function AdminRoute({ element }) {
   );
 }
 
-const ENABLE_ADMIN = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_ENABLE_ADMIN === 'true')
-  || (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.MODE !== 'production');
+// Enable admin area in production (protected by simple password gate).
+// If you want to disable it on a future build, set VITE_ENABLE_ADMIN explicitly to 'false' and adapt here.
+const ENABLE_ADMIN = true;
 const ROUTER_MODE = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_ROUTER) || (import.meta.env.MODE === 'production' ? 'hash' : 'browser');
 
 const routes = [
