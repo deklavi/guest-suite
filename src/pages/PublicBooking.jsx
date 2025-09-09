@@ -119,8 +119,8 @@ export default function PublicBooking({ enableAdmin = true }) {
       setResult({
         status: 'policy',
         message: usedInLast6M
-          ? `ניתן להתחיל חופשה עד ${allowedWeeks} שבועות קדימה (עד ${format(horizon,'d LLL yyyy',{locale:he})})`
-          : `אין שימוש ב־6 חודשים אחרונים — ניתן עד ${allowedWeeks} שבועות קדימה (עד ${format(horizon,'d LLL yyyy',{locale:he})})`,
+          ? `ניתן להזמין עד שישה שבועות מראש מאחר והשתמשת בחצי שנה האחרונה`
+          : `ניתן להזמין עד שמונה שבועות מראש מאחר ולא השתמשת בחצי השנה האחרונה`,
         request:{start:startReq,end:endReq,memberId,memberName}
       });
       setReserveStatus("");
