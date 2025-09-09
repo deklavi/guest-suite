@@ -6,7 +6,7 @@ export default function Terms() {
 
   useEffect(() => {
     document.documentElement.dir = "rtl";
-    fetch("/terms.md")
+    fetch(`${import.meta.env.BASE_URL}terms.md`)
       .then(r => (r.ok ? r.text() : Promise.reject()))
       .then(setText)
       .catch(() => setText(defaultText));

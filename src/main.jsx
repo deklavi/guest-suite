@@ -51,7 +51,7 @@ function AdminRoute({ element }) {
         {err && <div className="text-sm text-red-600">{err}</div>}
         <button className="bg-black text-white rounded-2xl px-4 py-2 w-full">כניסה</button>
         <div className="text-center text-sm">
-          <a className="underline" href="/">← חזרה לדף חיפוש</a>
+          <Link className="underline" to="/">← חזרה לדף חיפוש</Link>
         </div>
       </form>
     </div>

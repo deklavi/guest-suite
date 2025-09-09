@@ -5,7 +5,10 @@ export default function Privacy() {
   const [text, setText] = useState("");
   useEffect(() => {
     document.documentElement.dir = "rtl";
-    fetch("/privacy.md").then(r => (r.ok ? r.text() : Promise.reject())).then(setText).catch(() => setText(defaultText));
+    fetch(`${import.meta.env.BASE_URL}privacy.md`)
+      .then(r => (r.ok ? r.text() : Promise.reject()))
+      .then(setText)
+      .catch(() => setText(defaultText));
   }, []);
 
   return (

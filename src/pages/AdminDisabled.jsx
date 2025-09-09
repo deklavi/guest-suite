@@ -1,4 +1,5 @@
 import React, { useEffect } from "react";
+import { Link } from "react-router-dom";
 
 export default function AdminDisabled() {
   useEffect(() => { document.documentElement.dir = 'rtl'; }, []);
@@ -12,10 +13,9 @@ export default function AdminDisabled() {
           (לא מומלץ לפרסום ציבורי ללא הגנה).
         </p>
         <div>
-          <a className="underline" href="/">← חזרה לדף החיפוש</a>
+          <Link className="underline" to="/">← חזרה לדף החיפוש</Link>
         </div>
       </div>
     </div>
   );
 }
-
