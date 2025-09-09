@@ -95,23 +95,29 @@ export default function PublicBooking({ enableAdmin = true }) {
     // If member had a vacation within last 6 months → up to 6 weeks ahead
     // Else → up to 8 weeks ahead. The restriction applies to the START date only.
     const today = new Date();
+    const todayStart = startOfDay(today);
     const mid = normalizeId3(memberId) ?? String(memberId || "");
     // Find member's last-night date across existing bookings
-    let lastNight = null;
-    let lastNightByName = null;
+    let lastNightPastById = null;   // last used night in the past (by id)
+    let lastNightPastByName = null; // last used night in the past (by name)
     try {
       for (const b of bookings) {
         const ln = addDays(fromISO(b.end), -1);
-        if (String(b.memberId) === String(mid)) {
-          if (!lastNight || +ln > +lastNight) lastNight = ln;
-        }
-        if (String(b.memberName || "") === String(memberName || "")) {
-          if (!lastNightByName || +ln > +lastNightByName) lastNightByName = ln;
+        // consider only past usage (ignore future bookings)
+        if (+ln < +todayStart) {
+          if (String(b.memberId) === String(mid)) {
+            if (!lastNightPastById || +ln > +lastNightPastById) lastNightPastById = ln;
+          }
+          if (String(b.memberName || "").trim() === String(memberName || "").trim()) {
+            if (!lastNightPastByName || +ln > +lastNightPastByName) lastNightPastByName = ln;
+          }
         }
       }
     } catch {}
     const sixMonthsAgo = addMonths(today, -6);
-    const usedInLast6M = (lastNight && (+lastNight >= +sixMonthsAgo)) || (lastNightByName && (+lastNightByName >= +sixMonthsAgo));
+    const usedInLast6M =
+      (lastNightPastById && (+lastNightPastById >= +sixMonthsAgo)) ||
+      (lastNightPastByName && (+lastNightPastByName >= +sixMonthsAgo));
     const allowedWeeks = usedInLast6M ? 6 : 8;
     const horizon = addDays(startOfDay(today), allowedWeeks * 7);
 
