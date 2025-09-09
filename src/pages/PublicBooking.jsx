@@ -264,22 +264,114 @@ export default function PublicBooking({ enableAdmin = true }) {
       setReserveStatus("ok");
     } catch (e) { setReserveStatus("err"); }
   }
+  function recheckAndMaybeReserve(s, e) {
+    // Always re-validate current inputs before reserving
+    try {
+      const mid = normalizeId3(memberId) ?? String(memberId || "");
+      const today = new Date();
+      const todayStart = startOfDay(today);
+
+      // last-6-months usage (past reservations only)
+      let lastNightPastById = null;
+      let lastNightPastByName = null;
+      for (const b of bookings) {
+        const ln = addDays(fromISO(b.end), -1);
+        if (+ln >= +todayStart) continue; // only past
+        if (String(b.memberId) === String(mid)) {
+          if (!lastNightPastById || +ln > +lastNightPastById) lastNightPastById = ln;
+        }
+        if (String(b.memberName || "").trim() === String(memberName || "").trim()) {
+          if (!lastNightPastByName || +ln > +lastNightPastByName) lastNightPastByName = ln;
+        }
+      }
+      const sixMonthsAgo = addMonths(today, -6);
+      const usedInLast6M =
+        (lastNightPastById && (+lastNightPastById >= +sixMonthsAgo)) ||
+        (lastNightPastByName && (+lastNightPastByName >= +sixMonthsAgo));
+      const allowedWeeks = usedInLast6M ? 6 : 8;
+      const horizon = addDays(todayStart, allowedWeeks * 7);
+      if (+fromISO(s) > +horizon) {
+        setResult({
+          status: 'policy',
+          message: usedInLast6M
+            ? `ניתן להזמין עד שישה שבועות מראש מאחר והשתמשת בחצי שנה האחרונה`
+            : `ניתן להזמין עד שמונה שבועות מראש מאחר ולא השתמשת בחצי השנה האחרונה`,
+          request:{ start: s, end: e, memberId: mid, memberName }
+        });
+        setReserveStatus("");
+        return;
+      }
+
+      const nights = listNights(s, e);
+      // Basic 5-night policy across month and total
+      const perMonth = new Map();
+      for (const iso of nights) {
+        const key = format(fromISO(iso), 'yyyy-MM');
+        perMonth.set(key, (perMonth.get(key) || 0) + 1);
+      }
+      const overTotal = nights.length > 5;
+      const overAnyMonth = Array.from(perMonth.values()).some(c => c > 5);
+      if (overTotal || overAnyMonth) {
+        setResult({ status: 'policy', message: 'עד חמישה לילות בחודש', request:{ start: s, end: e, memberId: mid, memberName } });
+        setReserveStatus("");
+        return;
+      }
+
+      // Occupancy
+      const occ = occupiedSetAll();
+      const overlaps = nights.filter(n => occ.has(n));
+      if (overlaps.length > 0) {
+        // Partially or fully taken — recompute segments for UX
+        const free = nights.filter(n => !occ.has(n));
+        const segs = [];
+        let i = 0;
+        while (i < free.length) {
+          const start = free[i];
+          let j = i + 1;
+          while (j < free.length) {
+            const prev = fromISO(free[j-1]);
+            const cur = fromISO(free[j]);
+            if (differenceInCalendarDays(cur, prev) === 1) j++; else break;
+          }
+          const end = toISO(addDays(fromISO(free[j-1]), 1));
+          segs.push({ start, end });
+          i = j;
+        }
+        setResult({ status: overlaps.length === nights.length ? 'full' : 'partial', request:{ start: s, end: e, memberId: mid, memberName }, ...(segs.length? { segments: segs } : {}) });
+        setReserveStatus("");
+        return;
+      }
+
+      // Member monthly limit including existing
+      const perMonthExisting = new Map();
+      for (const b of bookings) {
+        if (String(b.memberId) !== String(mid)) continue;
+        for (let d = fromISO(b.start); d < fromISO(b.end); d = addDays(d, 1)) {
+          const key = format(d,'yyyy-MM');
+          perMonthExisting.set(key, (perMonthExisting.get(key)||0)+1);
+        }
+      }
+      for (const iso of nights) {
+        const key = format(fromISO(iso),'yyyy-MM');
+        const total = (perMonthExisting.get(key)||0) + 1;
+        if (total > 5) {
+          setResult({ status: 'policy', message: 'עד חמישה לילות בחודש', request:{ start: s, end: e, memberId: mid, memberName } });
+          setReserveStatus("");
+          return;
+        }
+      }
+
+      // All good — reserve
+      setResult({ status: 'ok', request:{ start: s, end: e, memberId: mid, memberName } });
+      reserveRange(s, e);
+    } catch {
+      setReserveStatus('err');
+    }
+  }
+
   function handleReserve() {
     if (!result || result.status !== 'ok') return;
-    const mid = normalizeId3(memberId) ?? String(memberId || "");
-    const same =
-      result.request &&
-      String(result.request.memberId) === String(mid) &&
-      String(result.request.memberName || "") === String(memberName || "") &&
-      result.request.start === startReq &&
-      result.request.end === endReq;
-    if (!same) {
-      // Prevent booking stale dates; ask to re-check availability first
-      setResult({ status: 'policy', message: 'התאריכים השתנו — נא ללחוץ "בדוק זמינות" שוב', request:{ start: startReq, end: endReq, memberId, memberName } });
-      setReserveStatus("");
-      return;
-    }
-    reserveRange(result.request.start, result.request.end);
+    recheckAndMaybeReserve(startReq, endReq);
   }
 
   // Reserve a specific range from the current result (e.g., alternative or segment),
@@ -298,7 +390,7 @@ export default function PublicBooking({ enableAdmin = true }) {
       setReserveStatus("");
       return;
     }
-    reserveRange(s, e);
+    recheckAndMaybeReserve(s, e);
   }
 
   // Suggestions based on currently active field's query
