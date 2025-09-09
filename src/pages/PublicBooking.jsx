@@ -31,6 +31,9 @@ export default function PublicBooking({ enableAdmin = true }) {
   const [showEndPicker, setShowEndPicker] = useState(false);
   const [endViewMonth, setEndViewMonth] = useState(() => startOfMonth(new Date()));
   const listboxId = 'member-suggest';
+  // Inquiry-only mode: public users cannot save bookings; they send an email request.
+  const INQUIRY_ONLY = (typeof import.meta !== 'undefined' && import.meta.env && (import.meta.env.VITE_PUBLIC_INQUIRY_ONLY ?? 'true')) === 'true';
+  const ADMIN_EMAIL = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_ADMIN_EMAIL) || '';
 
   // Invalidate previous availability result if inputs change from what was checked
   useEffect(() => {
@@ -458,11 +461,30 @@ export default function PublicBooking({ enableAdmin = true }) {
     return `${a} → ${b}`;
   }
 
+  function buildMailto(s, e) {
+    try {
+      const subj = `בקשת בירור זמינות — דירת האירוח`;
+      const nights = nightsBetween(s, e);
+      const body = [
+        `שם: ${memberName} (מזהה ${memberId})`,
+        `טווח מבוקש: ${prettyRange([s,e])}`,
+        `סה"כ לילות: ${nights}`,
+        '',
+        'נא לאשר אם פנוי. תודה!',
+      ].join('\n');
+      const addr = encodeURIComponent(ADMIN_EMAIL);
+      const qs = `subject=${encodeURIComponent(subj)}&body=${encodeURIComponent(body)}`;
+      return `mailto:${addr}?${qs}`;
+    } catch {
+      return `mailto:${ADMIN_EMAIL || ''}`;
+    }
+  }
+
   return (
     <div className="min-h-screen bg-gray-50" style={{ padding: 24 }}>
-      <div className="mx-auto" style={{ maxWidth: 720 }}>
-        <div className="flex items-end justify-between" style={{ marginBottom: 16 }}>
-          <div className="flex items-center gap-3">
+              <div className="mx-auto" style={{ maxWidth: 720 }}>
+                <div className="flex items-end justify-between" style={{ marginBottom: 16 }}>
+                  <div className="flex items-center gap-3">
             <img
               src="/kibbutz-logo.png"
               alt="לוגו הקיבוץ"
@@ -483,8 +505,13 @@ export default function PublicBooking({ enableAdmin = true }) {
           </div>
         </div>
 
-        <div className="bg-white border" style={{ borderRadius: 16, padding: 20, boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 12 }}>
+              <div className="bg-white border" style={{ borderRadius: 16, padding: 20, boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 12 }}>
+                    {INQUIRY_ONLY && (
+                      <div style={{ fontSize: 14, color: '#0f766e', background:'#ecfeff', border:'1px solid #cffafe', padding:'8px 12px', borderRadius: 10 }}>
+                        מצב בירור בלבד — הבקשה תישלח למנהל במייל, ללא שמירה אוטומטית.
+                      </div>
+                    )}
             {/* Live status for screen readers */}
             <div aria-live="polite" aria-atomic="true" style={{ position:'absolute', width:1, height:1, overflow:'hidden', clip:'rect(0 0 0 0)' }}>
               {(() => {
@@ -668,14 +695,25 @@ export default function PublicBooking({ enableAdmin = true }) {
               return (
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
                   <div>✅ פנוי — {prettyRange([result.request.start,result.request.end])}</div>
-                  <button
-                    onClick={handleReserve}
-                    disabled={stale}
-                    title={stale ? 'התאריכים השתנו — בדוק זמינות מחדש' : undefined}
-                    style={{ background: '#0f766e', color: 'white', borderRadius: 999, padding: '10px 14px', fontSize: 16, opacity: stale ? 0.6 : 1 }}
-                  >
-                    הזמנת תאריכים אלה
-                  </button>
+                  {INQUIRY_ONLY ? (
+                    <a
+                      href={buildMailto(result.request.start, result.request.end)}
+                      onClick={(e)=>{ if (stale) { e.preventDefault(); } }}
+                      title={stale ? 'התאריכים השתנו — בדוק זמינות מחדש' : undefined}
+                      style={{ background: '#0f766e', color: 'white', borderRadius: 999, padding: '10px 14px', fontSize: 16, opacity: stale ? 0.6 : 1, textDecoration: 'none' }}
+                    >
+                      שליחת בקשה במייל
+                    </a>
+                  ) : (
+                    <button
+                      onClick={handleReserve}
+                      disabled={stale}
+                      title={stale ? 'התאריכים השתנו — בדוק זמינות מחדש' : undefined}
+                      style={{ background: '#0f766e', color: 'white', borderRadius: 999, padding: '10px 14px', fontSize: 16, opacity: stale ? 0.6 : 1 }}
+                    >
+                      הזמנת תאריכים אלה
+                    </button>
+                  )}
                 </div>
               );
             })()}
@@ -695,14 +733,25 @@ export default function PublicBooking({ enableAdmin = true }) {
                   {result.alt ? (
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
                       <div>הצעה חלופית: {prettyRange([result.alt.start, result.alt.end])}</div>
-                      <button
-                        onClick={() => handleReserveExact(result.alt.start, result.alt.end)}
-                        disabled={stale}
-                        title={stale ? 'התאריכים השתנו — בדוק זמינות מחדש' : undefined}
-                        style={{ background: '#0f766e', color: 'white', borderRadius: 999, padding: '8px 12px', fontSize: 16, opacity: stale ? 0.6 : 1 }}
-                      >
-                        הזמנת ההצעה
-                      </button>
+                      {INQUIRY_ONLY ? (
+                        <a
+                          href={buildMailto(result.alt.start, result.alt.end)}
+                          onClick={(e)=>{ if (stale) e.preventDefault(); }}
+                          title={stale ? 'התאריכים השתנו — בדוק זמינות מחדש' : undefined}
+                          style={{ background: '#0f766e', color: 'white', borderRadius: 999, padding: '8px 12px', fontSize: 16, opacity: stale ? 0.6 : 1, textDecoration: 'none' }}
+                        >
+                          שליחת בקשה להצעה
+                        </a>
+                      ) : (
+                        <button
+                          onClick={() => handleReserveExact(result.alt.start, result.alt.end)}
+                          disabled={stale}
+                          title={stale ? 'התאריכים השתנו — בדוק זמינות מחדש' : undefined}
+                          style={{ background: '#0f766e', color: 'white', borderRadius: 999, padding: '8px 12px', fontSize: 16, opacity: stale ? 0.6 : 1 }}
+                        >
+                          הזמנת ההצעה
+                        </button>
+                      )}
                     </div>
                   ) : (
                     <div style={{ color: '#6b7280', fontSize: 14 }}>לא נמצאה הצעה חלופית מתאימה.</div>
@@ -726,14 +775,25 @@ export default function PublicBooking({ enableAdmin = true }) {
                       {result.segments.map((seg, i) => (
                         <div key={`${seg.start}-${i}`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
                           <div>{prettyRange([seg.start, seg.end])}</div>
-                          <button
-                            onClick={() => handleReserveExact(seg.start, seg.end)}
-                            disabled={stale}
-                            title={stale ? 'התאריכים השתנו — בדוק זמינות מחדש' : undefined}
-                            style={{ background: '#0f766e', color: 'white', borderRadius: 999, padding: '8px 12px', fontSize: 16, opacity: stale ? 0.6 : 1 }}
-                          >
-                            הזמנה לתאריכים אלו
-                          </button>
+                          {INQUIRY_ONLY ? (
+                            <a
+                              href={buildMailto(seg.start, seg.end)}
+                              onClick={(e)=>{ if (stale) e.preventDefault(); }}
+                              title={stale ? 'התאריכים השתנו — בדוק זמינות מחדש' : undefined}
+                              style={{ background: '#0f766e', color: 'white', borderRadius: 999, padding: '8px 12px', fontSize: 16, opacity: stale ? 0.6 : 1, textDecoration: 'none' }}
+                            >
+                              בקשה לתאריכים אלו
+                            </a>
+                          ) : (
+                            <button
+                              onClick={() => handleReserveExact(seg.start, seg.end)}
+                              disabled={stale}
+                              title={stale ? 'התאריכים השתנו — בדוק זמינות מחדש' : undefined}
+                              style={{ background: '#0f766e', color: 'white', borderRadius: 999, padding: '8px 12px', fontSize: 16, opacity: stale ? 0.6 : 1 }}
+                            >
+                              הזמנה לתאריכים אלו
+                            </button>
+                          )}
                         </div>
                       ))}
                     </div>
