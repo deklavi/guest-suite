@@ -1,8 +1,10 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Link } from "react-router-dom";
-import { addDays, addMonths, format, isBefore, parseISO, startOfDay, differenceInCalendarDays, getDay, startOfMonth, endOfMonth, eachDayOfInterval } from "date-fns";
-import { he } from "date-fns/locale";
-import { loadMembersSeeded } from "../lib/membersStore.js";
+ import React, { useEffect, useMemo, useRef, useState } from "react";
+  import { Link } from "react-router-dom";
+  import { addDays, addMonths, format, isBefore, parseISO, startOfDay,
+  differenceInCalendarDays, getDay, startOfMonth, endOfMonth,
+  eachDayOfInterval } from "date-fns";
+  import { he } from "date-fns/locale";
+  import { loadMembersSeeded, normalizeId3 } from "../lib/membersStore.js";
 
 const toISO = (d) => format(d, "yyyy-MM-dd");
 const fromISO = (s) => startOfDay(parseISO(s));
@@ -89,6 +91,42 @@ export default function PublicBooking({ enableAdmin = true }) {
     return null;
   }
   function handleCheck(){
+    // Policy: horizon depends on last vacation in the past 6 months
+    // If member had a vacation within last 6 months → up to 6 weeks ahead
+    // Else → up to 8 weeks ahead. The restriction applies to the START date only.
+    const today = new Date();
+    const mid = normalizeId3(memberId) ?? String(memberId || "");
+    // Find member's last-night date across existing bookings
+    let lastNight = null;
+    let lastNightByName = null;
+    try {
+      for (const b of bookings) {
+        const ln = addDays(fromISO(b.end), -1);
+        if (String(b.memberId) === String(mid)) {
+          if (!lastNight || +ln > +lastNight) lastNight = ln;
+        }
+        if (String(b.memberName || "") === String(memberName || "")) {
+          if (!lastNightByName || +ln > +lastNightByName) lastNightByName = ln;
+        }
+      }
+    } catch {}
+    const sixMonthsAgo = addMonths(today, -6);
+    const usedInLast6M = (lastNight && (+lastNight >= +sixMonthsAgo)) || (lastNightByName && (+lastNightByName >= +sixMonthsAgo));
+    const allowedWeeks = usedInLast6M ? 6 : 8;
+    const horizon = addDays(startOfDay(today), allowedWeeks * 7);
+
+    if (+fromISO(startReq) > +horizon) {
+      setResult({
+        status: 'policy',
+        message: usedInLast6M
+          ? `ניתן להתחיל חופשה עד ${allowedWeeks} שבועות קדימה (עד ${format(horizon,'d LLL yyyy',{locale:he})})`
+          : `אין שימוש ב־6 חודשים אחרונים — ניתן עד ${allowedWeeks} שבועות קדימה (עד ${format(horizon,'d LLL yyyy',{locale:he})})`,
+        request:{start:startReq,end:endReq,memberId,memberName}
+      });
+      setReserveStatus("");
+      return;
+    }
+
     const nights = listNights(startReq, endReq);
     // policy: up to 5 nights per calendar month and up to 5 nights total in a search
     const perMonth = new Map();
@@ -111,7 +149,7 @@ export default function PublicBooking({ enableAdmin = true }) {
     // Member monthly limit check (includes existing bookings)
     const perMonthExisting = new Map();
     for (const b of bookings) {
-      if (String(b.memberId) !== String(memberId)) continue;
+      if (String(b.memberId) !== String(mid)) continue;
       for (let d = fromISO(b.start); d < fromISO(b.end); d = addDays(d, 1)) {
         const key = format(d,'yyyy-MM');
         perMonthExisting.set(key, (perMonthExisting.get(key)||0)+1);
@@ -168,9 +206,10 @@ export default function PublicBooking({ enableAdmin = true }) {
     try {
       // Enforce member monthly limit again on save
       const nights = listNights(s, e);
+      const mid = normalizeId3(memberId) ?? String(memberId || "");
       const perMonthExisting = new Map();
       for (const b of bookings) {
-        if (String(b.memberId) !== String(memberId)) continue;
+        if (String(b.memberId) !== String(mid)) continue;
         for (let d = fromISO(b.start); d < fromISO(b.end); d = addDays(d,1)) {
           const key = format(d,'yyyy-MM');
           perMonthExisting.set(key, (perMonthExisting.get(key)||0)+1);
@@ -184,7 +223,7 @@ export default function PublicBooking({ enableAdmin = true }) {
       }
       const raw = localStorage.getItem("guest.bookings");
       const existing = raw ? JSON.parse(raw) : [];
-      const booking = { id: "b" + Date.now(), memberId, memberName, start: s, end: e };
+      const booking = { id: "b" + Date.now(), memberId: mid, memberName, start: s, end: e };
       const next = [...existing, booking];
       localStorage.setItem("guest.bookings", JSON.stringify(next));
       setBookings(next);
@@ -295,7 +334,7 @@ export default function PublicBooking({ enableAdmin = true }) {
                 if (result.status === 'ok') return `פנוי — ${prettyRange([result.request.start,result.request.end])}`;
                 if (result.status === 'full') return `תפוס — ${prettyRange([result.request.start,result.request.end])}`;
                 if (result.status === 'partial') return `חלקית — ${prettyRange([result.request.start,result.request.end])}`;
-                if (result.status === 'policy') return 'עד חמישה לילות בחודש';
+                if (result.status === 'policy') return String(result.message || 'עד חמישה לילות בחודש');
                 return '';
               })()}
             </div>
@@ -470,7 +509,7 @@ export default function PublicBooking({ enableAdmin = true }) {
               </div>
             )}
             {result.status === 'policy' && (
-              <div style={{ color: '#b91c1c' }}>❗ עד חמישה לילות בחודש</div>
+              <div style={{ color: '#b91c1c' }}>❗ {String(result.message || 'עד חמישה לילות בחודש')}</div>
             )}
             {result.status === 'full' && (
               <div style={{ display: 'grid', gap: 8 }}>
@@ -525,9 +564,9 @@ export default function PublicBooking({ enableAdmin = true }) {
           </div>
         )}
 
-        <div className="text-center" style={{ fontSize: 14, marginTop: 16 }}>
-          מנהל? עבור ל־ <a className="underline" href="/admin">דף המנהל</a>
-        </div>
+       <div className="text-center" style={{ fontSize: 14, marginTop: 16 }}>
+    מנהל? עבור ל־ <Link className="underline" to="/admin">דף המנהל</Link>
+  </div>
       </div>
     </div>
   );
