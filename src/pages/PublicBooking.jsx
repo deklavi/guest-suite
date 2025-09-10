@@ -35,6 +35,17 @@ export default function PublicBooking({ enableAdmin = true }) {
   const INQUIRY_ONLY = (typeof import.meta !== 'undefined' && import.meta.env && (import.meta.env.VITE_PUBLIC_INQUIRY_ONLY ?? 'true')) === 'true';
   const ADMIN_EMAIL = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_ADMIN_EMAIL) || 'dirateruah@gmail.com';
 
+  // Base64 URL-safe helpers that support Unicode (Hebrew names)
+  function toB64UrlFromJSON(obj) {
+    try {
+      const json = JSON.stringify(obj);
+      const bytes = new TextEncoder().encode(json);
+      let bin = '';
+      for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+      return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/,'');
+    } catch { return ''; }
+  }
+
   // Invalidate previous availability result if inputs change from what was checked
   useEffect(() => {
     if (!result) return;
@@ -462,7 +473,7 @@ export default function PublicBooking({ enableAdmin = true }) {
   }
 
   function buildAdminLinks(s, e) {
-    const payload = btoa(JSON.stringify({ memberId, memberName, start: s, end: e, ts: Date.now() })).replace(/\+/g,'-').replace(/\//g,'_');
+    const payload = toB64UrlFromJSON({ memberId, memberName, start: s, end: e, ts: Date.now() });
     const base = `${location.origin}${import.meta.env.BASE_URL || '/'}`;
     return {
       approve: `${base}#/admin?approve=${encodeURIComponent(payload)}`,

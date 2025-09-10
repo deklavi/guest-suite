@@ -50,6 +50,16 @@ export default function AdminDashboard() {
   // Handle approve/reject links coming from email (hash query params)
   useEffect(() => {
     try {
+      const fromB64UrlToJSON = (s) => {
+        try {
+          const b64 = String(s || '').replace(/-/g,'+').replace(/_/g,'/');
+          const bin = atob(b64);
+          const bytes = new Uint8Array(bin.length);
+          for (let i=0;i<bin.length;i++) bytes[i] = bin.charCodeAt(i);
+          const json = new TextDecoder().decode(bytes);
+          return JSON.parse(json);
+        } catch { return null; }
+      };
       const hash = typeof location !== 'undefined' ? location.hash || '' : '';
       const qIndex = hash.indexOf('?');
       if (qIndex === -1) return;
@@ -57,14 +67,9 @@ export default function AdminDashboard() {
       const params = new URLSearchParams(qs);
       const approve = params.get('approve');
       const reject = params.get('reject');
-      const payloadB64 = approve || reject;
-      if (!payloadB64) return;
-      const json = decodeURIComponent(payloadB64);
-      let data = null;
-      try {
-        const raw = atob(json.replace(/-/g,'+').replace(/_/g,'/'));
-        data = JSON.parse(raw);
-      } catch {}
+      const payload = approve || reject;
+      if (!payload) return;
+      const data = fromB64UrlToJSON(payload);
       if (!data || !data.memberId || !data.start || !data.end) return;
 
       if (approve) {
