@@ -34,6 +34,11 @@ export default function PublicBooking({ enableAdmin = true }) {
   // Inquiry-only mode: public users cannot save bookings; they send an email request.
   const INQUIRY_ONLY = (typeof import.meta !== 'undefined' && import.meta.env && (import.meta.env.VITE_PUBLIC_INQUIRY_ONLY ?? 'true')) === 'true';
   const ADMIN_EMAIL = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_ADMIN_EMAIL) || 'dirateruah@gmail.com';
+  // Only show inline manager links to admins (or if forced via env)
+  const SHOW_MANAGER_LINKS = (
+    (typeof window !== 'undefined' && (()=>{ try{return localStorage.getItem('simple.admin.ok')==='yes';}catch{return false;} })()) ||
+    (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_SHOW_MANAGER_LINKS === 'true')
+  );
 
   // Base64 URL-safe helpers that support Unicode (Hebrew names)
   function toB64UrlFromJSON(obj) {
@@ -741,7 +746,7 @@ export default function PublicBooking({ enableAdmin = true }) {
                       הזמנת תאריכים אלה
                     </button>
                   )}
-                  {INQUIRY_ONLY && (
+                  {INQUIRY_ONLY && SHOW_MANAGER_LINKS && (
                     <div style={{ width: '100%', fontSize: 12, color: '#475569' }}>
                       <div style={{ marginTop: 8 }}>קישורי אישור/דחייה למנהל (אפשר להעתיק):</div>
                       <div style={{ display:'grid', gap:6, marginTop:6 }}>
@@ -796,7 +801,7 @@ export default function PublicBooking({ enableAdmin = true }) {
                           הזמנת ההצעה
                         </button>
                       )}
-                      {INQUIRY_ONLY && (() => {
+                      {INQUIRY_ONLY && SHOW_MANAGER_LINKS && (() => {
                         const links = buildAdminLinks(result.alt.start, result.alt.end);
                         return (
                           <div style={{ width: '100%', fontSize: 12, color: '#475569' }}>
@@ -858,7 +863,7 @@ export default function PublicBooking({ enableAdmin = true }) {
                               הזמנה לתאריכים אלו
                             </button>
                           )}
-                          {INQUIRY_ONLY && (() => {
+                          {INQUIRY_ONLY && SHOW_MANAGER_LINKS && (() => {
                             const links = buildAdminLinks(seg.start, seg.end);
                             return (
                               <div style={{ width: '100%', fontSize: 12, color: '#475569' }}>
