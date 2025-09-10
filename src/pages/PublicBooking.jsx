@@ -465,10 +465,19 @@ export default function PublicBooking({ enableAdmin = true }) {
     try {
       const subj = `בקשת בירור זמינות — דירת האירוח`;
       const nights = nightsBetween(s, e);
+      // Action links for admin: approve/reject via admin page hash params (base64-encoded payload)
+      const payload = btoa(JSON.stringify({ memberId, memberName, start: s, end: e, ts: Date.now() })).replace(/\+/g,'-').replace(/\//g,'_');
+      const base = `${location.origin}${import.meta.env.BASE_URL || '/'}`;
+      const approveLink = `${base}#/admin?approve=${encodeURIComponent(payload)}`;
+      const rejectLink  = `${base}#/admin?reject=${encodeURIComponent(payload)}`;
       const body = [
         `שם: ${memberName} (מזהה ${memberId})`,
         `טווח מבוקש: ${prettyRange([s,e])}`,
         `סה"כ לילות: ${nights}`,
+        '',
+        'אישור/דחייה מהירים:',
+        approveLink,
+        rejectLink,
         '',
         'נא לאשר אם פנוי. תודה!',
       ].join('\n');

@@ -18,6 +18,7 @@ export default function AdminDashboard() {
   const [anchorDay, setAnchorDay] = useState(null); // for range selection
   const [assignIdx, setAssignIdx] = useState(0);
   const [reassignIdx, setReassignIdx] = useState(0);
+  const [flash, setFlash] = useState("");
 
   function highlight(text, q){
     if(!q) return text; const s=String(text); const i=s.toLowerCase().indexOf(q.toLowerCase()); if(i===-1) return text; return (<>{s.slice(0,i)}<mark>{s.slice(i,i+q.length)}</mark>{s.slice(i+q.length)}</>);
@@ -45,6 +46,45 @@ export default function AdminDashboard() {
       }
     } catch {}
   }, []);
+
+  // Handle approve/reject links coming from email (hash query params)
+  useEffect(() => {
+    try {
+      const hash = typeof location !== 'undefined' ? location.hash || '' : '';
+      const qIndex = hash.indexOf('?');
+      if (qIndex === -1) return;
+      const qs = hash.slice(qIndex + 1);
+      const params = new URLSearchParams(qs);
+      const approve = params.get('approve');
+      const reject = params.get('reject');
+      const payloadB64 = approve || reject;
+      if (!payloadB64) return;
+      const json = decodeURIComponent(payloadB64);
+      let data = null;
+      try {
+        const raw = atob(json.replace(/-/g,'+').replace(/_/g,'/'));
+        data = JSON.parse(raw);
+      } catch {}
+      if (!data || !data.memberId || !data.start || !data.end) return;
+
+      if (approve) {
+        // Avoid duplicate add if same booking exists
+        const exists = (bookings || []).some(b => String(b.memberId) === String(data.memberId) && b.start === data.start && b.end === data.end);
+        if (exists) { setFlash('הבקשה כבר אושרה בעבר (כפילות זוהתה)'); return; }
+        const id = 'b' + Date.now();
+        const next = [...(bookings || []), { id, memberId: String(data.memberId), memberName: String(data.memberName || data.memberId), start: data.start, end: data.end, note: 'אושר מקישור במייל' }];
+        try { localStorage.setItem('guest.bookings', JSON.stringify(next)); } catch {}
+        setBookings(next);
+        setFlash('הבקשה אושרה ונשמרה ביומן');
+      } else if (reject) {
+        setFlash('הבקשה סומנה כנדחתה (ללא שינוי ביומן)');
+      }
+
+      // Clean the query so reloading won't repeat the action
+      const base = hash.slice(0, qIndex);
+      setTimeout(() => { try { location.hash = base || '#/admin'; } catch {} }, 200);
+    } catch {}
+  }, [bookings]);
 
   // Load members for reassignment autocomplete
   useEffect(() => {
@@ -212,6 +252,12 @@ export default function AdminDashboard() {
             >התנתק</button>
           </nav>
         </header>
+
+        {flash && (
+          <div id="admin-live" className="bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl p-3">
+            {flash}
+          </div>
+        )}
 
 
         <div className="bg-white rounded-2xl border p-4">
