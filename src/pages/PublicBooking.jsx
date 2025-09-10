@@ -461,23 +461,29 @@ export default function PublicBooking({ enableAdmin = true }) {
     return `${a} → ${b}`;
   }
 
+  function buildAdminLinks(s, e) {
+    const payload = btoa(JSON.stringify({ memberId, memberName, start: s, end: e, ts: Date.now() })).replace(/\+/g,'-').replace(/\//g,'_');
+    const base = `${location.origin}${import.meta.env.BASE_URL || '/'}`;
+    return {
+      approve: `${base}#/admin?approve=${encodeURIComponent(payload)}`,
+      reject: `${base}#/admin?reject=${encodeURIComponent(payload)}`,
+    };
+  }
+
   function buildMailto(s, e) {
     try {
       const subj = `בקשת בירור זמינות — דירת האירוח`;
       const nights = nightsBetween(s, e);
-      // Action links for admin: approve/reject via admin page hash params (base64-encoded payload)
-      const payload = btoa(JSON.stringify({ memberId, memberName, start: s, end: e, ts: Date.now() })).replace(/\+/g,'-').replace(/\//g,'_');
-      const base = `${location.origin}${import.meta.env.BASE_URL || '/'}`;
-      const approveLink = `${base}#/admin?approve=${encodeURIComponent(payload)}`;
-      const rejectLink  = `${base}#/admin?reject=${encodeURIComponent(payload)}`;
+      // Action links for admin: approve/reject via admin page hash params
+      const { approve: approveLink, reject: rejectLink } = buildAdminLinks(s, e);
       const body = [
         `שם: ${memberName} (מזהה ${memberId})`,
         `טווח מבוקש: ${prettyRange([s,e])}`,
         `סה"כ לילות: ${nights}`,
         '',
         'אישור/דחייה מהירים:',
-        approveLink,
-        rejectLink,
+        `אישור: ${approveLink}`,
+        `דחייה: ${rejectLink}`,
         '',
         'נא לאשר אם פנוי. תודה!',
       ].join('\n');
@@ -701,6 +707,7 @@ export default function PublicBooking({ enableAdmin = true }) {
                 String(result.request.memberName || "") !== String(memberName || "") ||
                 result.request.start !== startReq ||
                 result.request.end !== endReq;
+              const links = INQUIRY_ONLY ? buildAdminLinks(result.request.start, result.request.end) : null;
               return (
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
                   <div>✅ פנוי — {prettyRange([result.request.start,result.request.end])}</div>
@@ -722,6 +729,23 @@ export default function PublicBooking({ enableAdmin = true }) {
                     >
                       הזמנת תאריכים אלה
                     </button>
+                  )}
+                  {INQUIRY_ONLY && (
+                    <div style={{ width: '100%', fontSize: 12, color: '#475569' }}>
+                      <div style={{ marginTop: 8 }}>קישורי אישור/דחייה למנהל (אפשר להעתיק):</div>
+                      <div style={{ display:'grid', gap:6, marginTop:6 }}>
+                        <div style={{ display:'flex', gap:8, alignItems:'center', flexWrap:'wrap' }}>
+                          <span>אישור:</span>
+                          <a href={links.approve} target="_blank" rel="noreferrer" style={{ wordBreak:'break-all' }}>{links.approve}</a>
+                          <button onClick={(e)=>{e.preventDefault(); navigator.clipboard?.writeText(links.approve);}} style={{ border:'1px solid #e5e7eb', padding:'2px 8px', borderRadius:8 }}>העתק</button>
+                        </div>
+                        <div style={{ display:'flex', gap:8, alignItems:'center', flexWrap:'wrap' }}>
+                          <span>דחייה:</span>
+                          <a href={links.reject} target="_blank" rel="noreferrer" style={{ wordBreak:'break-all' }}>{links.reject}</a>
+                          <button onClick={(e)=>{e.preventDefault(); navigator.clipboard?.writeText(links.reject);}} style={{ border:'1px solid #e5e7eb', padding:'2px 8px', borderRadius:8 }}>העתק</button>
+                        </div>
+                      </div>
+                    </div>
                   )}
                 </div>
               );
@@ -761,6 +785,26 @@ export default function PublicBooking({ enableAdmin = true }) {
                           הזמנת ההצעה
                         </button>
                       )}
+                      {INQUIRY_ONLY && (() => {
+                        const links = buildAdminLinks(result.alt.start, result.alt.end);
+                        return (
+                          <div style={{ width: '100%', fontSize: 12, color: '#475569' }}>
+                            <div style={{ marginTop: 8 }}>קישורי אישור/דחייה למנהל להצעה:</div>
+                            <div style={{ display:'grid', gap:6, marginTop:6 }}>
+                              <div style={{ display:'flex', gap:8, alignItems:'center', flexWrap:'wrap' }}>
+                                <span>אישור:</span>
+                                <a href={links.approve} target="_blank" rel="noreferrer" style={{ wordBreak:'break-all' }}>{links.approve}</a>
+                                <button onClick={(e)=>{e.preventDefault(); navigator.clipboard?.writeText(links.approve);}} style={{ border:'1px solid #e5e7eb', padding:'2px 8px', borderRadius:8 }}>העתק</button>
+                              </div>
+                              <div style={{ display:'flex', gap:8, alignItems:'center', flexWrap:'wrap' }}>
+                                <span>דחייה:</span>
+                                <a href={links.reject} target="_blank" rel="noreferrer" style={{ wordBreak:'break-all' }}>{links.reject}</a>
+                                <button onClick={(e)=>{e.preventDefault(); navigator.clipboard?.writeText(links.reject);}} style={{ border:'1px solid #e5e7eb', padding:'2px 8px', borderRadius:8 }}>העתק</button>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })()}
                     </div>
                   ) : (
                     <div style={{ color: '#6b7280', fontSize: 14 }}>לא נמצאה הצעה חלופית מתאימה.</div>
@@ -803,6 +847,26 @@ export default function PublicBooking({ enableAdmin = true }) {
                               הזמנה לתאריכים אלו
                             </button>
                           )}
+                          {INQUIRY_ONLY && (() => {
+                            const links = buildAdminLinks(seg.start, seg.end);
+                            return (
+                              <div style={{ width: '100%', fontSize: 12, color: '#475569' }}>
+                                <div style={{ marginTop: 6 }}>קישורי אישור/דחייה למנהל למקטע זה:</div>
+                                <div style={{ display:'grid', gap:6, marginTop:6 }}>
+                                  <div style={{ display:'flex', gap:8, alignItems:'center', flexWrap:'wrap' }}>
+                                    <span>אישור:</span>
+                                    <a href={links.approve} target="_blank" rel="noreferrer" style={{ wordBreak:'break-all' }}>{links.approve}</a>
+                                    <button onClick={(e)=>{e.preventDefault(); navigator.clipboard?.writeText(links.approve);}} style={{ border:'1px solid #e5e7eb', padding:'2px 8px', borderRadius:8 }}>העתק</button>
+                                  </div>
+                                  <div style={{ display:'flex', gap:8, alignItems:'center', flexWrap:'wrap' }}>
+                                    <span>דחייה:</span>
+                                    <a href={links.reject} target="_blank" rel="noreferrer" style={{ wordBreak:'break-all' }}>{links.reject}</a>
+                                    <button onClick={(e)=>{e.preventDefault(); navigator.clipboard?.writeText(links.reject);}} style={{ border:'1px solid #e5e7eb', padding:'2px 8px', borderRadius:8 }}>העתק</button>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })()}
                         </div>
                       ))}
                     </div>
