@@ -33,7 +33,7 @@ export default function PublicBooking({ enableAdmin = true }) {
   const listboxId = 'member-suggest';
   // Inquiry-only mode: public users cannot save bookings; they send an email request.
   const INQUIRY_ONLY = (typeof import.meta !== 'undefined' && import.meta.env && (import.meta.env.VITE_PUBLIC_INQUIRY_ONLY ?? 'true')) === 'true';
-  const ADMIN_EMAIL = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_ADMIN_EMAIL) || '';
+  const ADMIN_EMAIL = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_ADMIN_EMAIL) || 'dirateruah@gmail.com';
 
   // Invalidate previous availability result if inputs change from what was checked
   useEffect(() => {
