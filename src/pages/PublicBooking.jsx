@@ -35,10 +35,8 @@ export default function PublicBooking({ enableAdmin = true }) {
   const INQUIRY_ONLY = (typeof import.meta !== 'undefined' && import.meta.env && (import.meta.env.VITE_PUBLIC_INQUIRY_ONLY ?? 'true')) === 'true';
   const ADMIN_EMAIL = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_ADMIN_EMAIL) || 'dirateruah@gmail.com';
   // Only show inline manager links to admins (or if forced via env)
-  const SHOW_MANAGER_LINKS = (
-    (typeof window !== 'undefined' && (()=>{ try{return localStorage.getItem('simple.admin.ok')==='yes';}catch{return false;} })()) ||
-    (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_SHOW_MANAGER_LINKS === 'true')
-  );
+  // Show inline manager links only if explicitly enabled at build time
+  const SHOW_MANAGER_LINKS = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_SHOW_MANAGER_LINKS === 'true');
 
   // Base64 URL-safe helpers that support Unicode (Hebrew names)
   function toB64UrlFromJSON(obj) {
