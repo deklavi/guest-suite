@@ -237,15 +237,17 @@ export default function Members() {
           <nav style={{ display: 'flex', gap: 8 }}>
             <Link to="/admin" style={{ textDecoration: 'none', border: '1px solid #e5e7eb', background: '#f8fafc', padding: '6px 12px', borderRadius: 999, fontSize: 14 }}>← דף המנהל</Link>
             <Link to="/" style={{ textDecoration: 'none', border: '1px solid #e5e7eb', background: '#f8fafc', padding: '6px 12px', borderRadius: 999, fontSize: 14 }}>דף הבית</Link>
-            <button
-              onClick={() => {
-                resetDemoMembers();
-                window.location.reload();
-              }}
-              style={{ textDecoration: 'none', border: '1px solid #e5e7eb', background: '#f8fafc', padding: '6px 12px', borderRadius: 999, fontSize: 14 }}
-            >
-              איפוס מאגר דמו
-            </button>
+            {((typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_SHOW_DEMO_BUTTON === 'true')) && (
+              <button
+                onClick={() => {
+                  resetDemoMembers();
+                  window.location.reload();
+                }}
+                style={{ textDecoration: 'none', border: '1px solid #e5e7eb', background: '#f8fafc', padding: '6px 12px', borderRadius: 999, fontSize: 14 }}
+              >
+                איפוס מאגר דמו
+              </button>
+            )}
             <button onClick={()=>{ try{ localStorage.removeItem('simple.admin.ok'); }catch{} window.location.hash = '#/admin'; }} style={{ textDecoration: 'none', border: '1px solid #e5e7eb', background: '#f8fafc', padding: '6px 12px', borderRadius: 999, fontSize: 14 }}>התנתק</button>
           </nav>
         </header>

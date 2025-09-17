@@ -24,27 +24,13 @@ export default function AdminDashboard() {
     if(!q) return text; const s=String(text); const i=s.toLowerCase().indexOf(q.toLowerCase()); if(i===-1) return text; return (<>{s.slice(0,i)}<mark>{s.slice(i,i+q.length)}</mark>{s.slice(i+q.length)}</>);
   }
 
-  // Load bookings and seed simple demo if empty
+  // Load bookings once; never auto-seed in production to avoid overwriting real data
   useEffect(() => {
     try {
       const raw = localStorage.getItem("guest.bookings");
       const existing = raw ? JSON.parse(raw) : [];
-
-      const today = new Date();
-      const mStart = startOfMonth(today);
-      const sample = [
-        { id: "b1", memberId: "700006", memberName: "דקל לוי", start: format(addDays(mStart, 4), "yyyy-MM-dd"), end: format(addDays(mStart, 7), "yyyy-MM-dd") },
-        { id: "b2", memberId: "700001", memberName: "רועי כהן", start: format(addDays(mStart, 11), "yyyy-MM-dd"), end: format(addDays(mStart, 14), "yyyy-MM-dd") },
-        { id: "b3", memberId: "700015", memberName: "מאיה שלו", start: format(addDays(mStart, 19), "yyyy-MM-dd"), end: format(addDays(mStart, 22), "yyyy-MM-dd") },
-      ];
-
-      if (!raw || existing.length === 0) {
-        localStorage.setItem("guest.bookings", JSON.stringify(sample));
-        setBookings(sample);
-      } else {
-        setBookings(existing);
-      }
-    } catch {}
+      setBookings(Array.isArray(existing) ? existing : []);
+    } catch { setBookings([]); }
   }, []);
 
   // Handle approve/reject links coming from email (hash query params)
@@ -74,10 +60,13 @@ export default function AdminDashboard() {
 
       if (approve) {
         // Avoid duplicate add if same booking exists
-        const exists = (bookings || []).some(b => String(b.memberId) === String(data.memberId) && b.start === data.start && b.end === data.end);
+        // Re-read from storage to ensure latest state
+        let latest = [];
+        try { const rr = localStorage.getItem('guest.bookings'); latest = rr ? JSON.parse(rr) : []; } catch {}
+        const exists = (latest || []).some(b => String(b.memberId) === String(data.memberId) && b.start === data.start && b.end === data.end);
         if (exists) { setFlash('הבקשה כבר אושרה בעבר (כפילות זוהתה)'); return; }
         const id = 'b' + Date.now();
-        const next = [...(bookings || []), { id, memberId: String(data.memberId), memberName: String(data.memberName || data.memberId), start: data.start, end: data.end, note: 'אושר מקישור במייל' }];
+        const next = [...(latest || []), { id, memberId: String(data.memberId), memberName: String(data.memberName || data.memberId), start: data.start, end: data.end, note: 'אושר מקישור במייל' }];
         try { localStorage.setItem('guest.bookings', JSON.stringify(next)); } catch {}
         setBookings(next);
         setFlash('הבקשה אושרה ונשמרה ביומן');
