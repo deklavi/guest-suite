@@ -27,7 +27,7 @@ function AdminRoute({ element }) {
     e.preventDefault();
     if (pwd === "1234") {
       localStorage.setItem("simple.admin.ok", "yes");
-      const to = location.pathname || "/admin";
+      const to = `${location.pathname || "/admin"}${location.search || ""}${location.hash || ""}`;
       navigate(to, { replace: true });
     } else {
       setErr("סיסמה שגויה");
