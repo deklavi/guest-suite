@@ -22,8 +22,8 @@ export default function PublicBooking({ enableAdmin = true }) {
   const [activeField, setActiveField] = useState(null); // 'id' | 'name' | null
   const [showSuggest, setShowSuggest] = useState(false);
   const [highlightIdx, setHighlightIdx] = useState(0);
-  const [startReq, setStartReq] = useState(toISO(new Date()));
-  const [endReq, setEndReq] = useState(toISO(addDays(new Date(), 2)));
+  const [startReq, setStartReq] = useState("");
+  const [endReq, setEndReq] = useState("");
   const [result, setResult] = useState(null);
   const [reserveStatus, setReserveStatus] = useState("");
   const [bookings, setBookings] = useState([]);
@@ -75,7 +75,10 @@ export default function PublicBooking({ enableAdmin = true }) {
     return (<>{before}<mark>{match}</mark>{after}</>);
   }
 
-  const canCheck = useMemo(()=> memberId && memberName && isBefore(fromISO(startReq), fromISO(endReq)), [memberId, memberName, startReq, endReq]);
+  const canCheck = useMemo(() => {
+    if (!memberId || !memberName || !startReq || !endReq) return false;
+    try { return isBefore(fromISO(startReq), fromISO(endReq)); } catch { return false; }
+  }, [memberId, memberName, startReq, endReq]);
 
   useEffect(() => {
     try { setMembers(loadMembersSeeded()); } catch {}
@@ -642,13 +645,14 @@ export default function PublicBooking({ enableAdmin = true }) {
                 ref={endDateRef}
                 type="text"
                 readOnly
-                style={{ width: '100%', border: '1px solid #e5e7eb', borderRadius: 10, padding: '12px 14px', fontSize: 18, background: '#fff', cursor: 'pointer' }}
+                style={{ width: '100%', border: '1px solid #e5e7eb', borderRadius: 10, padding: '12px 14px', fontSize: 18, background: '#fff', cursor: startReq ? 'pointer' : 'not-allowed', color: startReq ? '#111827' : '#94a3b8' }}
+                placeholder={!startReq ? 'בחרו תאריך הגעה קודם' : ''}
                 value={displayDate(endReq)}
                 onFocus={()=>{ setEndViewMonth(startOfMonth(fromISO(endReq || startReq))); setShowEndPicker(true); }}
                 onClick={()=>{ setEndViewMonth(startOfMonth(fromISO(endReq || startReq))); setShowEndPicker(true); }}
                 onBlur={()=>{ setTimeout(() => setShowEndPicker(false), 120); }}
               />
-              {showEndPicker && (
+              {showEndPicker && startReq && (
                 <div
                   role="dialog"
                   aria-label="בחר תאריך עזיבה"
